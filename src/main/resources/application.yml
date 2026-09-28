@@ -1,0 +1,27 @@
+server:
+  port: ${SERVER_PORT:8183}
+
+spring:
+  application:
+    name: occupify-payment
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5532/occupify_payment}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
