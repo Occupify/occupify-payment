@@ -19,7 +19,11 @@
 
     <properties>
         <java.version>25</java.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
         <maven.compiler.release>25</maven.compiler.release>
+        <jjwt.version>0.12.6</jjwt.version>
+        <springdoc.version>2.6.0</springdoc.version>
+        <lombok.version>1.18.40</lombok.version>
     </properties>
 
     <dependencies>
