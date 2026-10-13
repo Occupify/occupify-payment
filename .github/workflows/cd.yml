@@ -91,15 +91,17 @@ jobs:
         env:
           PAYMENT_ENV_CONTENT: ${{ secrets.PAYMENT_ENV_FILE }}
         run: |
+          mkdir -p ~/.config/systemd/user/git-ops/compose
+          mkdir -p ~/.config/systemd/user/git-ops/env
           mkdir -p ~/.config/systemd/user/git-ops/nginx/logs
           mkdir -p ~/.config/systemd/user/git-ops/nginx/run
           mkdir -p ~/.config/systemd/user/git-ops/nginx/body
 
           echo "Inject payment.env..."
-          printf "%s" "$PAYMENT_ENV_CONTENT" > ~/.config/systemd/user/git-ops/payment.env
+          printf "%s" "$PAYMENT_ENV_CONTENT" > ~/.config/systemd/user/git-ops/env/payment.env
 
           echo "Sync compose and service units..."
-          cp compose/docker.*.compose.yml ~/.config/systemd/user/git-ops/
+          cp compose/docker.*.compose.yml ~/.config/systemd/user/git-ops/compose/
           cp service/occupify-*.service ~/.config/systemd/user/
           cp nginx/default.conf ~/.config/systemd/user/git-ops/nginx/default.conf
 
