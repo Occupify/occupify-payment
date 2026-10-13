@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: be-deploy-payment
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
@@ -85,6 +85,8 @@ jobs:
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
           echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
+          OWNER="${{ github.repository_owner }}"
+          echo "IMAGE_OWNER=${OWNER,,}" >> "$GITHUB_ENV"
 
       - name: Sync Permanent Configs & Environment
         working-directory: gitops-manifests
@@ -109,7 +111,7 @@ jobs:
         working-directory: gitops-manifests
         env:
           RUNNER_TRACKING_ID: ""
-          IMAGE_OWNER: ${{ github.repository_owner }}
+          IMAGE_OWNER: ${{ env.IMAGE_OWNER }}
         run: |
           make be-payment
 
