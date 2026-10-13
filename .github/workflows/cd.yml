@@ -76,7 +76,7 @@ jobs:
         with:
           repository: ${{ env.GITOPS_REPO }}
           path: gitops-manifests
-          ref: main
+          ref: ${{ github.ref_name }}
           token: ${{ secrets.GITOPS_PAT || github.token }}
 
       - name: Setup Rootless Podman Environment
@@ -100,7 +100,7 @@ jobs:
           mkdir -p ~/.config/systemd/user/git-ops/nginx/body
 
           echo "Inject payment.env..."
-          printf "%s" "$PAYMENT_ENV_CONTENT" > ~/.config/systemd/user/git-ops/env/payment.env
+          printf "%s\nIMAGE_OWNER=occupify\n" "$PAYMENT_ENV_CONTENT" > ~/.config/systemd/user/git-ops/env/payment.env
 
           echo "Sync compose and service units..."
           cp compose/docker.*.compose.yml ~/.config/systemd/user/git-ops/compose/
