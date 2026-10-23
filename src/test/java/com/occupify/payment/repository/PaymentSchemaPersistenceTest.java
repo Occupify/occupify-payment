@@ -15,10 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -120,35 +122,85 @@ class PaymentSchemaPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should persist and retrieve Contract (Local Replicated Entity from Core)")
+    @DisplayName("Should persist and retrieve Contract (Local Replicated Entity from Core matching ERD)")
     void shouldPersistContract() {
+        User employer = userRepository.saveAndFlush(User.builder()
+                .id(UUID.randomUUID())
+                .email("employer.contract@occupify.com")
+                .fullName("Employer Company")
+                .build());
+
+        User employee = userRepository.saveAndFlush(User.builder()
+                .id(UUID.randomUUID())
+                .email("employee.contract@occupify.com")
+                .fullName("Expert Freelancer")
+                .build());
+
         UUID jobId = UUID.randomUUID();
-        UUID freelancerId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        LocalDateTime startedAt = LocalDateTime.now();
+        LocalDateTime finishedAt = startedAt.plusMonths(2);
 
         Contract contract = Contract.builder()
                 .jobId(jobId)
-                .freelancerId(freelancerId)
-                .title("Fullstack Web Development")
-                .description("Build microservice payment integration")
-                .budget(new BigDecimal("2500.0000"))
+                .employer(employer)
+                .employee(employee)
+                .sourceType("JOB_BID")
+                .sourceId(sourceId)
+                .agreedRate(new BigDecimal("2500.0000"))
                 .salaryType(SalaryType.FIXED)
-                .startDate(LocalDate.now())
-                .endDate(LocalDate.now().plusMonths(2))
-                .attachmentUrl("https://occupify.com/contracts/spec.pdf")
                 .status(ContractStatus.IN_PROGRESS)
+                .paymentStatus("ESCROW_HELD")
+                .startedAt(startedAt)
+                .finishedAt(finishedAt)
                 .build();
 
         Contract saved = contractRepository.saveAndFlush(contract);
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getJobId()).isEqualTo(jobId);
-        assertThat(saved.getFreelancerId()).isEqualTo(freelancerId);
-        assertThat(saved.getTitle()).isEqualTo("Fullstack Web Development");
-        assertThat(saved.getBudget()).isEqualByComparingTo("2500.0000");
+        assertThat(saved.getEmployer().getId()).isEqualTo(employer.getId());
+        assertThat(saved.getEmployee().getId()).isEqualTo(employee.getId());
+        assertThat(saved.getEmployerId()).isEqualTo(employer.getId());
+        assertThat(saved.getEmployeeId()).isEqualTo(employee.getId());
+        assertThat(saved.getSourceType()).isEqualTo("JOB_BID");
+        assertThat(saved.getSourceId()).isEqualTo(sourceId);
+        assertThat(saved.getAgreedRate()).isEqualByComparingTo("2500.0000");
         assertThat(saved.getSalaryType()).isEqualTo(SalaryType.FIXED);
         assertThat(saved.getStatus()).isEqualTo(ContractStatus.IN_PROGRESS);
-        assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(saved.getUpdatedAt()).isNotNull();
+        assertThat(saved.getPaymentStatus()).isEqualTo("ESCROW_HELD");
+        assertThat(saved.getStartedAt()).isNotNull();
+        assertThat(saved.getFinishedAt()).isNotNull();
+
+        Page<Contract> employerContracts = contractRepository.findByEmployerId(employer.getId(), PageRequest.of(0, 10));
+        assertThat(employerContracts.getContent()).hasSize(1);
+
+        Page<Contract> employeeContracts = contractRepository.findByEmployeeId(employee.getId(), PageRequest.of(0, 10));
+        assertThat(employeeContracts.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Should allow nullable employee on contract creation (open for bidding)")
+    void shouldAllowNullableEmployeeOnContract() {
+        User employer = userRepository.saveAndFlush(User.builder()
+                .id(UUID.randomUUID())
+                .email("open.employer@occupify.com")
+                .fullName("Open Client")
+                .build());
+
+        Contract contract = Contract.builder()
+                .jobId(UUID.randomUUID())
+                .employer(employer)
+                .employee(null)
+                .agreedRate(new BigDecimal("1500.0000"))
+                .salaryType(SalaryType.DAY)
+                .status(ContractStatus.PENDING)
+                .build();
+
+        Contract saved = contractRepository.saveAndFlush(contract);
+        assertThat(saved.getId()).isNotNull();
+        assertThat(saved.getEmployee()).isNull();
+        assertThat(saved.getEmployeeId()).isNull();
     }
 
     @Test
@@ -168,9 +220,8 @@ class PaymentSchemaPersistenceTest {
 
         Contract contract = contractRepository.saveAndFlush(Contract.builder()
                 .jobId(UUID.randomUUID())
-                .freelancerId(UUID.randomUUID())
-                .title("Mobile App Development")
-                .budget(new BigDecimal("3000.0000"))
+                .employer(user)
+                .agreedRate(new BigDecimal("3000.0000"))
                 .salaryType(SalaryType.FIXED)
                 .status(ContractStatus.PENDING)
                 .build());
@@ -215,8 +266,8 @@ class PaymentSchemaPersistenceTest {
 
         Contract contract = contractRepository.saveAndFlush(Contract.builder()
                 .jobId(UUID.randomUUID())
-                .title("UI/UX Design Phase 1 & 2")
-                .budget(new BigDecimal("5000.0000"))
+                .employer(user)
+                .agreedRate(new BigDecimal("5000.0000"))
                 .salaryType(SalaryType.FIXED)
                 .build());
 
@@ -232,7 +283,7 @@ class PaymentSchemaPersistenceTest {
         Transaction escrowHold = Transaction.builder()
                 .wallet(wallet)
                 .contract(contract)
-                .amount(new BigDecimal("2500.0000"))
+                .amount(new BigDecimal("5000.0000"))
                 .transactionType(TransactionType.ESCROW_HOLD)
                 .paymentMethod(PaymentMethod.INTERNAL_WALLET)
                 .status(TransactionStatus.SUCCESS)
@@ -279,8 +330,8 @@ class PaymentSchemaPersistenceTest {
 
         Contract contract = contractRepository.saveAndFlush(Contract.builder()
                 .jobId(UUID.randomUUID())
-                .title("Some Contract")
-                .budget(new BigDecimal("100.0000"))
+                .employer(user)
+                .agreedRate(new BigDecimal("100.0000"))
                 .salaryType(SalaryType.FIXED)
                 .build());
 
@@ -297,12 +348,18 @@ class PaymentSchemaPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should fail when persisting Contract with non-positive budget (Check Constraint Invariant)")
-    void shouldFailWhenContractBudgetIsNotPositive() {
+    @DisplayName("Should fail when persisting Contract with non-positive agreed_rate (Check Constraint Invariant)")
+    void shouldFailWhenContractAgreedRateIsNotPositive() {
+        User user = userRepository.saveAndFlush(User.builder()
+                .id(UUID.randomUUID())
+                .email("contract.check@occupify.com")
+                .fullName("Check User")
+                .build());
+
         Contract invalidContract = Contract.builder()
                 .jobId(UUID.randomUUID())
-                .title("Invalid Budget Contract")
-                .budget(new BigDecimal("-50.0000"))
+                .employer(user)
+                .agreedRate(new BigDecimal("-50.0000"))
                 .salaryType(SalaryType.FIXED)
                 .build();
 
