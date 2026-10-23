@@ -42,7 +42,7 @@ erDiagram
         VARCHAR email UK
         VARCHAR full_name
         VARCHAR avatar_url "Nullable"
-        ENUM role "FREELANCER, CLIENT, ADMIN"
+        ENUM role "EMPLOYEE, EMPLOYER, ADMIN"
         ENUM status "ACTIVE, INACTIVE, DELETED"
         TIMESTAMP created_at "Audit"
         TIMESTAMP deleted_at "Soft Delete (Nullable)"
@@ -64,7 +64,7 @@ erDiagram
         ENUM target_type "USER, PROJECT"
         UUID target_user_id FK "-> users.id (Nullable)"
         UUID target_project_id FK "-> projects.id (Nullable)"
-        ENUM reason_category "FRAUD, OUTSIDE PAYMENT, FAKE INFORMATION, SPAM, HARASSMENT, OTHER"
+        ENUM reason_category "FRAUD, OUTSIDE_PAYMENT, FAKE_INFORMATION, SPAM, HARASSMENT, OTHER"
         TEXT description
         ENUM status "PENDING, RESOLVED, DISMISSED"
         TIMESTAMP created_at "Audit"
@@ -115,7 +115,7 @@ erDiagram
 | `target_type` | `ENUM('USER', 'PROJECT')` | NOT NULL | None | Đối tượng bị báo cáo (Người dùng hoặc Dự án) |
 | `target_user_id` | `UUID` | **FK** -> `users.id`, NULLABLE | NULL | Người dùng bị báo cáo (nếu `target_type = USER`) |
 | `target_project_id`| `UUID` | **FK** -> `projects.id`, NULLABLE | NULL | Dự án bị báo cáo (nếu `target_type = PROJECT`) |
-| `reason_category` | `ENUM('FRAUD', 'OUTSIDE PAYMENT', 'FAKE INFORMATION', 'SPAM', 'HARASSMENT', 'OTHER')` | NOT NULL | None | Danh mục lý do vi phạm |
+| `reason_category` | `ENUM('FRAUD', 'OUTSIDE_PAYMENT', 'FAKE_INFORMATION', 'SPAM', 'HARASSMENT', 'OTHER')` | NOT NULL | None | Danh mục lý do vi phạm |
 | `description` | `TEXT` | NOT NULL | None | Diễn giải chi tiết nội dung vi phạm |
 | `status` | `ENUM('PENDING', 'RESOLVED', 'DISMISSED')` | NOT NULL | `'PENDING'` | Trạng thái xử lý báo cáo |
 | `created_at` | `TIMESTAMP` | NOT NULL | `CURRENT_TIMESTAMP` | Thời điểm gửi báo cáo (Audit) |
@@ -153,10 +153,10 @@ erDiagram
 | Tên cột | Kiểu dữ liệu | Ràng buộc | Giá trị mặc định | Mô tả nghiệp vụ |
 |:---|:---|:---|:---|:---|
 | `id` | `UUID` | **PK**, NOT NULL | None | Khóa chính người dùng (đồng bộ từ Identity) |
-| `email` | `VARCHAR(255)` | **UQ**, NOT NULL | None | Email tài khoản duy nhất |
+| `email` | `VARCHAR(255)` | **UK**, NOT NULL | None | Email tài khoản duy nhất |
 | `full_name` | `VARCHAR(150)` | NOT NULL | None | Họ và tên người dùng |
 | `avatar_url` | `VARCHAR(500)` | NULLABLE | NULL | Đường dẫn ảnh đại diện |
-| `role` | `ENUM('FREELANCER', 'CLIENT', 'ADMIN')` | NOT NULL | None | Vai trò chính của người dùng |
+| `role` | `ENUM('EMPLOYEE', 'EMPLOYER', 'ADMIN')` | NOT NULL | None | Vai trò chính của người dùng |
 | `status` | `ENUM('ACTIVE', 'INACTIVE', 'DELETED')` | NOT NULL | `'ACTIVE'` | Trạng thái hoạt động của tài khoản |
 | `created_at` | `TIMESTAMP` | NOT NULL | `CURRENT_TIMESTAMP` | Thời điểm tạo tài khoản (Audit) |
 | `deleted_at` | `TIMESTAMP` | NULLABLE | NULL | Thời điểm xóa mềm tài khoản |
