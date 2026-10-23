@@ -65,7 +65,7 @@ erDiagram
         VARCHAR email UK
         VARCHAR full_name
         VARCHAR avatar_url
-        ENUM role "freelancer, client, admin"
+        ENUM role "EMPLOYEE, EMPLOYER, ADMIN"
         ENUM status "ACTIVE, INACTIVE, DELETED"
         TIMESTAMP created_at "Audit"
         TIMESTAMP deleted_at "Soft Delete (Nullable)"
@@ -174,12 +174,12 @@ erDiagram
     REPORTS {
         UUID id PK
         UUID reporter_user_id FK "-> users.id"
-        ENUM target_type "user, project"
+        ENUM target_type "USER, PROJECT"
         UUID target_user_id FK "-> users.id (Nullable)"
         UUID target_project_id FK "-> projects.id (Nullable)"
-        ENUM reason_category "fraud, outside_payment, fake_information, spam, harassment, other"
+        ENUM reason_category "FRAUD, OUTSIDE_PAYMENT, FAKE_INFORMATION, SPAM, HARASSMENT, OTHER"
         TEXT description
-        ENUM status "pending, resolved, dismissed"
+        ENUM status "PENDING, RESOLVED, DISMISSED"
         TIMESTAMP created_at "Audit"
         TIMESTAMP updated_at "Audit"
     }
@@ -258,10 +258,10 @@ erDiagram
 | Tên cột | Kiểu dữ liệu | Ràng buộc | Giá trị mặc định | Mô tả nghiệp vụ |
 |:---|:---|:---|:---|:---|
 | `id` | `UUID` | **PK**, NOT NULL | None | Khóa chính người dùng (đồng bộ từ Identity) |
-| `email` | `VARCHAR(255)` | **UQ**, NOT NULL | None | Email tài khoản |
+| `email` | `VARCHAR(255)` | **UK**, NOT NULL | None | Email tài khoản |
 | `full_name` | `VARCHAR(150)` | NOT NULL | None | Họ và tên người dùng |
 | `avatar_url` | `VARCHAR(500)` | NULLABLE | NULL | Đường dẫn ảnh đại diện |
-| `role` | `ENUM('freelancer', 'client', 'admin')` | NOT NULL | None | Vai trò ngữ cảnh trong sàn việc làm |
+| `role` | `ENUM('EMPLOYEE', 'EMPLOYER', 'ADMIN')` | NOT NULL | None | Vai trò chính của người dùng |
 | `status` | `ENUM('ACTIVE', 'INACTIVE', 'DELETED')` | NOT NULL | `'ACTIVE'` | Trạng thái hoạt động tài khoản |
 | `created_at` | `TIMESTAMP` | NOT NULL | `CURRENT_TIMESTAMP` | Thời điểm tạo tài khoản (Audit) |
 | `deleted_at` | `TIMESTAMP` | NULLABLE | NULL | Thời điểm xóa mềm tài khoản |
@@ -355,12 +355,12 @@ Bảng hợp đồng chính thức do **Core** sở hữu gốc.
 |:---|:---|:---|:---|:---|
 | `id` | `UUID` | **PK**, NOT NULL | None | Khóa chính báo cáo (đồng bộ từ Admin) |
 | `reporter_user_id` | `UUID` | **FK** -> `users.id`, NOT NULL | None | Người tạo báo cáo |
-| `target_type` | `ENUM('user', 'project')` | NOT NULL | None | Đối tượng bị báo cáo vi phạm |
+| `target_type` | `ENUM('USER', 'PROJECT')` | NOT NULL | None | Đối tượng bị báo cáo vi phạm |
 | `target_user_id` | `UUID` | **FK** -> `users.id`, NULLABLE | NULL | Người dùng bị tố cáo vi phạm |
 | `target_project_id`| `UUID` | **FK** -> `projects.id`, NULLABLE | NULL | Dự án bị tố cáo vi phạm |
-| `reason_category` | `ENUM('fraud', 'outside_payment', 'fake_information', 'spam', 'harassment', 'other')` | NOT NULL | None | Danh mục vi phạm |
+| `reason_category` | `ENUM('FRAUD', 'OUTSIDE_PAYMENT', 'FAKE_INFORMATION', 'SPAM', 'HARASSMENT', 'OTHER')` | NOT NULL | None | Danh mục vi phạm |
 | `description` | `TEXT` | NOT NULL | None | Mô tả chi tiết sự việc vi phạm |
-| `status` | `ENUM('pending', 'resolved', 'dismissed')` | NOT NULL | `'pending'` | Trạng thái xử lý báo cáo |
+| `status` | `ENUM('PENDING', 'RESOLVED', 'DISMISSED')` | NOT NULL | `'PENDING'` | Trạng thái xử lý báo cáo |
 | `created_at` | `TIMESTAMP` | NOT NULL | `CURRENT_TIMESTAMP` | Thời điểm tạo báo cáo (Audit) |
 | `updated_at` | `TIMESTAMP` | NOT NULL | `CURRENT_TIMESTAMP` | Thời điểm cập nhật báo cáo (Audit) |
 
