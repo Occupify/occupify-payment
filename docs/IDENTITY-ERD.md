@@ -127,7 +127,7 @@ erDiagram
 
     CONTRACTS {
         UUID id PK
-        UUID project_role_id "Logical FK -> Core.job"
+        UUID job_id "Logical FK -> Core.job"
         UUID employer_id FK "-> users.id"
         UUID employee_id FK "-> users.id (Nullable)"
         VARCHAR source_type "JOB_BID, DIRECT_OFFER"
@@ -264,7 +264,7 @@ Bảng sao chép từ service **Core** phục vụ truy vấn lịch sử làm v
 | Tên cột | Kiểu dữ liệu | Ràng buộc | Giá trị mặc định | Mô tả nghiệp vụ |
 |:---|:---|:---|:---|:---|
 | `id` | `UUID` | **PK**, NOT NULL | None | Khóa chính định danh hợp đồng (đồng bộ từ Core) |
-| `project_role_id` | `UUID` | **FK (Logical)** -> `Core.job.id` | None | Vị trí công việc tuyển dụng gắn liền hợp đồng |
+| `job_id` | `UUID` | **FK (Logical)** -> `Core.job.id` | None | Vị trí công việc tuyển dụng gắn liền hợp đồng |
 | `employer_id` | `UUID` | **FK** -> `users.id`, NOT NULL | None | Người dùng bên thuê (Client) |
 | `employee_id` | `UUID` | **FK** -> `users.id`, NULLABLE | NULL | Người dùng bên nhận việc (Freelancer, NULL khi khởi tạo) |
 | `source_type` | `VARCHAR(50)` | NULLABLE | NULL | Nguồn gốc hợp đồng: `JOB_BID`, `DIRECT_OFFER` |
@@ -309,7 +309,7 @@ Bảng sao chép từ service **Core** phục vụ hiển thị đánh giá nh�
 ### 4.2. Khóa Ngoại Logic & Tích Hợp Liên Bounded Context
 | Cột trong `occupify_id` | Bảng nội bộ | Bounded Context Đích | Bảng Đích | Ý nghĩa nghiệp vụ |
 |:---|:---|:---|:---|:---|
-| `project_role_id` | `contracts` | **Core** | `job.id` | Vị trí công việc tuyển dụng liên kết hợp đồng |
+| `job_id` | `contracts` | **Core** | `job.id` | Vị trí công việc tuyển dụng liên kết hợp đồng |
 | `source_id` | `contracts` | **Core** | `bids.id` / `offers.id` | Bản chào thầu hoặc lời mời làm việc tạo ra hợp đồng |
 | *Được tham chiếu bởi* | *Bảng bên ngoài* | *Bounded Context nguồn* | *Cột tham chiếu* | *Ý nghĩa nghiệp vụ* |
 | `users.id` | `wallets` | **Payment** | `user_id` | Một User có thể sở hữu 1 hoặc nhiều ví tiền (1 : 1/N Wallets) |
