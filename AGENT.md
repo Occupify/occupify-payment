@@ -96,13 +96,19 @@ The project follows a clean, technically layered Spring Boot architecture under 
 ```
 occupify-payment/
 ├── .agent/
-│   ├── ECOSYSTEM-ARCHITECTURE.md   # Shared microservices architecture blueprint across all Occupify services
 │   ├── ARCHITECTURE.md             # Service-specific architectural blueprint for occupify-payment
+│   ├── ECOSYSTEM-ARCHITECTURE.md   # Shared microservices architecture blueprint across all Occupify services
 │   ├── OCCUPIFY.md                 # Product vision, freelancer-first domain briefing
-│   └── plugins/backend/            # Antigravity backend agent skills, personas, and prompts
+│   ├── README.md                   # Agent system setup & personas guide
+│   ├── rules/                      # Domain invariants (Dual-role, Escrow) and verification protocols
+│   └── agents/                     # Spring Boot subagent personas (tech-lead, core-dev, gateway-dev, etc.)
 ├── docs/
 │   ├── ECOSYSTEM-ERD.md            # Shared 5-service ERD & schema catalog across all Occupify services
 │   ├── ERD.md                      # Service-specific ERD for occupify-payment (4 tables + financial invariants)
+│   ├── IDENTITY-ERD.md             # Service-specific ERD for occupify-identity (Users, Profiles, Skills)
+│   ├── CORE-ERD.md                 # Service-specific ERD for occupify-core (Projects, Jobs, Bids, Offers, Reviews)
+│   ├── NOTIFICATION-ERD.md         # Service-specific ERD for occupify-notification (In-app notifications)
+│   ├── ADMINISTRATION-ERD.md       # Service-specific ERD for occupify-admin (Reports, Flagged accounts, Audit logs)
 │   └── Response-ErrorHandling-Architecture.md # Project response & exception envelope specifications
 ├── src/
 │   ├── main/
