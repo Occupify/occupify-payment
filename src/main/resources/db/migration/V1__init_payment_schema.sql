@@ -18,18 +18,19 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS contracts (
     id UUID PRIMARY KEY,
     job_id UUID NOT NULL,
-    freelancer_id UUID,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    budget DECIMAL(19, 4) NOT NULL,
+    employer_id UUID NOT NULL,
+    employee_id UUID,
+    source_type VARCHAR(50),
+    source_id UUID,
+    agreed_rate DECIMAL(19, 4) NOT NULL,
     salary_type VARCHAR(50) NOT NULL,
-    start_date DATE,
-    end_date DATE,
-    attachment_url VARCHAR(500),
-    status VARCHAR(50) NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_contracts_budget_positive CHECK (budget > 0)
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    payment_status VARCHAR(50),
+    started_at TIMESTAMP,
+    finished_at TIMESTAMP,
+    CONSTRAINT fk_contracts_employer FOREIGN KEY (employer_id) REFERENCES users(id),
+    CONSTRAINT fk_contracts_employee FOREIGN KEY (employee_id) REFERENCES users(id),
+    CONSTRAINT chk_contracts_agreed_rate_positive CHECK (agreed_rate > 0)
 );
 
 -- 3. Table: wallets (Digital wallet for user accounts)
@@ -63,7 +64,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- 5. Indexes for Query Performance and Foreign Keys
 CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_job_id ON contracts(job_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_freelancer_id ON contracts(freelancer_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_employer_id ON contracts(employer_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_employee_id ON contracts(employee_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
 CREATE INDEX IF NOT EXISTS idx_transactions_wallet_id ON transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_contract_id ON transactions(contract_id);
