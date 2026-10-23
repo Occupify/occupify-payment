@@ -65,18 +65,18 @@ Sơ đồ dưới đây mô tả cấu trúc thực thể của cả 5 Bounded C
 ```mermaid
 flowchart TB
     subgraph ID_SRV["1. Identity (occupify-identity)"]
-        USERS["<b>users</b><br/>• id (PK)<br/>• email (UQ), password_hash<br/>• full_name, headline, avatar_url<br/>• role, status, bio, phone_number<br/>• created_at, updated_at, deleted_at"]
+        USERS["<b>users</b><br/>• id (PK)<br/>• email (UK), password_hash<br/>• full_name, headline, avatar_url<br/>• role (EMPLOYEE/EMPLOYER/ADMIN), status, bio, phone_number<br/>• created_at, updated_at, deleted_at"]
         EXP["<b>experiences</b><br/>• id (PK)<br/>• user_id (FK -> users.id)<br/>• title, location, organization<br/>• employment_type, location_type<br/>• start_date, end_date, is_current"]
         EDU["<b>educations</b><br/>• id (PK)<br/>• user_id (FK -> users.id)<br/>• institution, field_of_study, degree, grade<br/>• start_date, end_date"]
         QUAL["<b>qualifications</b><br/>• id (PK)<br/>• user_id (FK -> users.id)<br/>• title, organization, credential_id<br/>• credential_url, issue_date, expiration_date"]
         ID_SKILLS["<b>skills</b><br/>• id (PK)<br/>• name (UQ), category"]
         SKILL_USR["<b>skills_users</b><br/>• skill_id (PK/FK -> skills.id)<br/>• user_id (PK/FK -> users.id)<br/>• is_top_skill, years_of_experience, proficiency_level"]
-        ID_CONTRACTS["<b>contracts</b> (Local Entity)<br/>• id (PK)<br/>• project_role_id (Job Ref), source_id<br/>• employer_id (FK -> users.id)<br/>• employee_id (FK -> users.id, NULL)<br/>• agreed_rate, salary_type, status, payment_status<br/>• started_at, finished_at"]
+        ID_CONTRACTS["<b>contracts</b> (Local Entity)<br/>• id (PK)<br/>• job_id (Job Ref), source_id<br/>• employer_id (FK -> users.id)<br/>• employee_id (FK -> users.id, NULL)<br/>• agreed_rate, salary_type, status, payment_status<br/>• started_at, finished_at"]
         ID_REVIEWS["<b>reviews</b> (Local Entity)<br/>• id (PK)<br/>• contract_id (FK -> contracts.id)<br/>• reviewer_user_id (FK -> users.id)<br/>• reviewee_user_id (FK -> users.id)<br/>• rating, comment, created_at, updated_at"]
     end
 
     subgraph CORE_SRV["2. Core (occupify-core)"]
-        CORE_USERS["<b>users</b> (Local Entity)<br/>• id (PK)<br/>• email (UQ), full_name, avatar_url<br/>• role, status, created_at, deleted_at"]
+        CORE_USERS["<b>users</b> (Local Entity)<br/>• id (PK)<br/>• email (UK), full_name, avatar_url<br/>• role (EMPLOYEE/EMPLOYER/ADMIN), status, created_at, deleted_at"]
         PROJECTS["<b>projects</b><br/>• id (PK)<br/>• employer_id (FK -> users.id)<br/>• title, status, start_price, period<br/>• due_date, experience_level, created_at, closed_at"]
         JOBS["<b>job</b><br/>• id (PK)<br/>• project_id (FK -> projects.id)<br/>• title, salary_type, budget_min/max<br/>• quantity, status, created_at, updated_at"]
         CORE_SKILLS["<b>skills</b><br/>• id (PK)<br/>• name (UQ)"]
@@ -85,13 +85,13 @@ flowchart TB
         OFFERS["<b>offers</b><br/>• id (PK)<br/>• contract_id (FK -> contracts.id)<br/>• freelancer_id (FK -> users.id)<br/>• proposed_rate, status, created_at"]
         CORE_CANCELS["<b>cancellation_contracts</b><br/>• id (PK)<br/>• contract_id (FK -> contracts.id)<br/>• requested_by_user_id (FK -> users.id)<br/>• reason, status"]
         CORE_REVIEWS["<b>reviews</b><br/>• id (PK)<br/>• contract_id (FK -> contracts.id)<br/>• reviewer_user_id (FK -> users.id)<br/>• reviewee_user_id (FK -> users.id)<br/>• rating, comment, created_at"]
-        CORE_REPORTS["<b>reports</b> (Local Entity)<br/>• id (PK)<br/>• reporter_user_id (FK -> users.id)<br/>• target_type, target_user_id (FK -> users.id, NULL)<br/>• target_project_id (FK -> projects.id, NULL)<br/>• reason_category, status"]
+        CORE_REPORTS["<b>reports</b> (Local Entity)<br/>• id (PK)<br/>• reporter_user_id (FK -> users.id)<br/>• target_type (USER/PROJECT)<br/>• target_user_id (FK -> users.id, NULL)<br/>• target_project_id (FK -> projects.id, NULL)<br/>• reason_category (FRAUD/OUTSIDE_PAYMENT...), status"]
         CORE_EVIDENCES["<b>report_evidences</b> (Local Entity)<br/>• id (PK)<br/>• report_id (FK -> reports.id)<br/>• file_url, created_at"]
     end
 
     subgraph PAY_SRV["3. Payment (occupify-payment)"]
         PAY_USERS["<b>users</b> (Local Entity)<br/>• id (PK)<br/>• email (UQ), full_name, avatar_url"]
-        CONTRACTS["<b>contracts</b> (Local Entity)<br/>• id (PK)<br/>• job_id (Job Ref)<br/>• freelancer_id (User Ref, NULL)<br/>• title, description, budget<br/>• salary_type, status, attachment_url<br/>• start_date, end_date<br/>• created_at, updated_at"]
+        CONTRACTS["<b>contracts</b> (Local Entity)<br/>• id (PK)<br/>• job_id (Job Ref), source_id<br/>• employer_id (FK -> users.id)<br/>• employee_id (FK -> users.id, NULL)<br/>• source_type, agreed_rate<br/>• salary_type, status, payment_status<br/>• started_at, finished_at"]
         TRANSACTIONS["<b>transactions</b><br/>• id (PK)<br/>• wallet_id (FK -> wallets.id)<br/>• contract_id (FK -> contracts.id)<br/>• amount, transaction_type<br/>• payment_method, status<br/>• created_at"]
     end
 
@@ -101,7 +101,7 @@ flowchart TB
     end
 
     subgraph ADMIN_SRV["5. Administration (occupify-admin)"]
-        ADMIN_USERS["<b>users</b> (Local Entity)<br/>• id (PK)<br/>• email (UQ), full_name, avatar_url<br/>• role, status<br/>• created_at, deleted_at"]
+        ADMIN_USERS["<b>users</b> (Local Entity)<br/>• id (PK)<br/>• email (UK), full_name, avatar_url<br/>• role (EMPLOYEE/EMPLOYER/ADMIN), status<br/>• created_at, deleted_at"]
         ADMIN_PROJECTS["<b>projects</b> (Local Entity)<br/>• id (PK)<br/>• employer_id (FK -> users.id)<br/>• title, description, status<br/>• created_at, closed_at"]
         REPORTS["<b>reports</b><br/>• id (PK)<br/>• reporter_user_id (FK -> users.id)<br/>• target_type (USER/PROJECT)<br/>• target_user_id (FK -> users.id, NULL)<br/>• target_project_id (FK -> projects.id, NULL)<br/>• reason_category, status, description<br/>• created_at, updated_at"]
         EVIDENCES["<b>report_evidences</b><br/>• id (PK)<br/>• report_id (FK -> reports.id)<br/>• file_url, created_at"]
@@ -144,6 +144,8 @@ flowchart TB
     CORE_REPORTS -->|1:N report_id| CORE_EVIDENCES
     %% Internal Physical Foreign Keys in Payment (Local Entities & Core Tables)
     PAY_USERS -->|1:1/N user_id| WALLETS
+    PAY_USERS -->|1:N employer_id| CONTRACTS
+    PAY_USERS -->|1:N employee_id| CONTRACTS
     WALLETS -->|1:N wallet_id| TRANSACTIONS
     CONTRACTS -->|1:N contract_id| TRANSACTIONS
 
@@ -171,9 +173,9 @@ flowchart TB
     CORE_REVIEWS -.->|Sync Entity Replication| ID_REVIEWS
     %% Cross-Service Logical References (Dotted lines)
     JOBS -.->|Logical Ref: job_id| CONTRACTS
-    JOBS -.->|Logical Ref: project_role_id| ID_CONTRACTS
+    JOBS -.->|Logical Ref: job_id| ID_CONTRACTS
     BIDS -.->|Logical Ref: source_id| ID_CONTRACTS
-    USERS -.->|Logical Ref: freelancer_id| CONTRACTS
+    BIDS -.->|Logical Ref: source_id| CONTRACTS
     ID_SKILLS -.->|Sync Catalog| CORE_SKILLS
 ```
 
@@ -185,10 +187,10 @@ flowchart TB
 
 | Bounded Context Chứa Khóa Ngoại | Bảng Nguồn | Cột Khóa Ngoại Logic | Bounded Context Đích | Bảng Đích | Khóa Chính Đích | Diễn Giải Nghiệp Vụ |
 |:---|:---|:---|:---|:---|:---|:---|
-| **Identity** | `contracts` | `project_role_id` | **Core** | `job` | `id` | Vị trí công việc tuyển dụng gắn liền hợp đồng |
+| **Identity** | `contracts` | `job_id` | **Core** | `job` | `id` | Vị trí công việc tuyển dụng gắn liền hợp đồng |
 | **Identity** | `contracts` | `source_id` | **Core** | `bids` / `offers` | `id` | Bản chào giá (Bid) hoặc Lời mời (Offer) tạo ra hợp đồng |
 | **Payment** | `contracts` | `job_id` | **Core** | `job` | `id` | Vị trí công việc tuyển dụng liên kết hợp đồng |
-| **Payment** | `contracts` | `freelancer_id` | **Identity** | `users` | `id` | Freelancer / Ứng viên nhận việc (Nullable) |
+| **Payment** | `contracts` | `source_id` | **Core** | `bids` / `offers` | `id` | Bản chào giá (Bid) hoặc Lời mời (Offer) tạo ra hợp đồng |
 
 ### 4.2. Khóa Ngoại Nội Bộ & Thực Thể Sao Chép trong Bounded Context Identity (`occupify-identity`)
 
@@ -247,6 +249,8 @@ Service `occupify-payment` sở hữu gốc các bảng ví và sổ cái giao d
 |:---|:---|:---|:---|:---|:---|
 | `wallets` | `user_id` | `users` | `id` | Physical FK | Một người dùng (User) sở hữu một hoặc nhiều ví (Wallets) |
 | `transactions` | `wallet_id` | `wallets` | `id` | Physical FK | Một ví (Wallet) có thể có nhiều giao dịch (Transactions) |
+| `contracts` | `employer_id` | `users` | `id` | Physical FK | Người dùng tham gia hợp đồng dưới vai trò bên thuê (employer) |
+| `contracts` | `employee_id` | `users` | `id` | Physical FK (Nullable) | Người dùng tham gia hợp đồng dưới vai trò người làm thuê (employee) |
 | `transactions` | `contract_id` | `contracts` | `id` | Physical FK | Một hợp đồng có thể liên quan đến nhiều giao dịch thanh toán |
 
 *Cơ chế đồng bộ dữ liệu cho entity sao chép trong `occupify-payment`:*
@@ -355,7 +359,7 @@ Quản lý danh tính người dùng, xác thực tài khoản, hồ sơ năng l
 
 7. **`contracts`** *(Local Entity - Sao chép từ Core)*:
    - `id`: `UUID [PK]` — Định danh hợp đồng.
-   - `project_role_id`: `UUID [FK -> Core.job]` — Khóa ngoại logic trỏ tới vị trí tuyển dụng (`Core.job.id`).
+   - `job_id`: `UUID [FK -> Core.job]` — Khóa ngoại logic trỏ tới vị trí tuyển dụng (`Core.job.id`).
    - `employer_id`: `UUID [FK -> users.id]` — Người dùng bên thuê (Client).
    - `employee_id`: `UUID [FK -> users.id, NULLABLE]` — Người dùng bên nhận việc (Freelancer, NULL khi khởi tạo).
    - `source_type`: `VARCHAR(50)` — Nguồn gốc hợp đồng (`JOB_BID`, `DIRECT_OFFER`,...).
@@ -439,7 +443,7 @@ Quản lý danh tính người dùng, xác thực tài khoản, hồ sơ năng l
    - `email`: `VARCHAR(255) [UQ]` — Email tài khoản.
    - `full_name`: `VARCHAR(150)` — Họ và tên người dùng.
    - `avatar_url`: `VARCHAR(500)` — Đường dẫn ảnh đại diện.
-   - `role`: `ENUM('freelancer', 'client', 'admin')` — Vai trò ngữ cảnh trong sàn việc làm.
+   - `role`: `ENUM('EMPLOYEE', 'EMPLOYER', 'ADMIN')` — Vai trò chính của người dùng.
    - `status`: `ENUM('ACTIVE', 'INACTIVE', 'DELETED')` — Trạng thái hoạt động tài khoản.
    - `created_at`: `TIMESTAMP` — Thời điểm tạo tài khoản.
    - `deleted_at`: `TIMESTAMP [NULL]` — Thời điểm xóa tài khoản.
@@ -501,12 +505,12 @@ Quản lý danh tính người dùng, xác thực tài khoản, hồ sơ năng l
 11. **`reports`** *(Local Entity - Sao chép từ Administration)*:
     - `id`: `UUID [PK]` — Định danh báo cáo vi phạm.
     - `reporter_user_id`: `UUID [FK -> users.id]` — Người tạo báo cáo.
-    - `target_type`: `ENUM('user', 'project')` — Đối tượng bị báo cáo vi phạm.
+    - `target_type`: `ENUM('USER', 'PROJECT')` — Đối tượng bị báo cáo vi phạm.
     - `target_user_id`: `UUID [FK -> users.id, NULLABLE]` — Người dùng bị tố cáo vi phạm.
     - `target_project_id`: `UUID [FK -> projects.id, NULLABLE]` — Dự án bị tố cáo vi phạm.
-    - `reason_category`: `ENUM('fraud', 'outside_payment', 'fake_information', 'spam', 'harassment', 'other')` — Danh mục vi phạm.
+    - `reason_category`: `ENUM('FRAUD', 'OUTSIDE_PAYMENT', 'FAKE_INFORMATION', 'SPAM', 'HARASSMENT', 'OTHER')` — Danh mục vi phạm.
     - `description`: `TEXT` — Mô tả chi tiết sự việc vi phạm.
-    - `status`: `ENUM('pending', 'resolved', 'dismissed')` — Trạng thái xử lý báo cáo.
+    - `status`: `ENUM('PENDING', 'RESOLVED', 'DISMISSED')` — Trạng thái xử lý báo cáo.
     - `created_at`: `TIMESTAMP` — Thời điểm tạo báo cáo.
     - `updated_at`: `TIMESTAMP` — Thời điểm cập nhật báo cáo.
 
@@ -566,30 +570,30 @@ Chịu trách nhiệm quản lý ví tài khoản, xử lý nạp/rút tiền, l
    - `full_name`: `VARCHAR(150)` — Họ và tên người dùng.
    - `avatar_url`: `VARCHAR(500)` — Đường dẫn ảnh đại diện.
 
-4. **`contracts`** *(Local Entity - Sao chép từ Core phục vụ thanh toán)*:
+4. **`contracts`** *(Local Entity - Sao chép nguyên mẫu từ Core phục vụ thanh toán)*:
    - `id`: `UUID [PK]` — Khóa chính của hợp đồng.
    - `job_id`: `UUID [FK -> Core.job]` — Khóa ngoại logic trỏ tới vị trí công việc bên service **Core** (`job.id`).
-   - `freelancer_id`: `UUID [FK -> Identity.users, NULLABLE]` — Khóa ngoại logic trỏ tới Freelancer bên service **Identity** (`users.id`).
-   - `title`: `VARCHAR(255)` — Tiêu đề hợp đồng.
-   - `description`: `TEXT` — Chi tiết mô tả công việc / hợp đồng.
-   - `budget`: `DECIMAL` — Ngân sách thỏa thuận.
-   - `salary_type`: `ENUM('fixed', 'hourly', 'weekly', 'monthly')` — Hình thức tính thù lao.
-   - `start_date`: `DATE` — Ngày bắt đầu hợp đồng.
-   - `end_date`: `DATE` — Ngày kết thúc hợp đồng.
-   - `attachment_url`: `VARCHAR(500)` — Đường dẫn tài liệu đính kèm.
-   - `status`: `ENUM('pending', 'in_progress', 'completed', 'cancelled')` — Trạng thái hợp đồng.
-   - `created_at`: `TIMESTAMP` — Thời điểm tạo hợp đồng.
-   - `updated_at`: `TIMESTAMP` — Thời điểm cập nhật hợp đồng.
+   - `employer_id`: `UUID [FK -> users.id]` — Người dùng bên thuê (Client) ký quỹ/thanh toán.
+   - `employee_id`: `UUID [FK -> users.id, NULLABLE]` — Freelancer nhận việc nhận giải ngân.
+   - `source_type`: `VARCHAR(50)` — Nguồn tạo hợp đồng (`JOB_BID`, `DIRECT_OFFER`).
+   - `source_id`: `UUID` — Định danh bản ghi nguồn (`Core.bids.id` hoặc `Core.offers.id`).
+   - `agreed_rate`: `DECIMAL` — Mức thù lao thỏa thuận chi trả / giá trị hợp đồng.
+   - `salary_type`: `VARCHAR(50)` — Chu kỳ thù lao (`DAY`, `WEEK`,...).
+   - `status`: `VARCHAR(50)` — Trạng thái hợp đồng (`pending`, `in_progress`, `completed`, `cancelled`).
+   - `payment_status`: `VARCHAR(50)` — Trạng thái ký quỹ / thanh toán.
+   - `started_at`: `TIMESTAMP` — Thời điểm chính thức bắt đầu công việc.
+   - `finished_at`: `TIMESTAMP` — Thời điểm hoàn tất công việc.
 
 #### 5.3.2. Các Mối Quan Hệ (Relationships)
 
 1. **`users (1) - (1/N) wallets`**: Một người dùng (User) sở hữu một hoặc nhiều ví (Wallets). Liên kết thông qua trường `user_id` trong bảng `wallets` tham chiếu đến `id` của bảng `users`.
-2. **`wallets (1) - (N) transactions`**: Một ví (Wallet) có thể có nhiều giao dịch (Transactions). Liên kết thông qua trường `wallet_id` trong bảng `transactions` tham chiếu đến `id` của bảng `wallets`.
-3. **`contracts (1) - (N) transactions`**: Một hợp đồng (Contract) có thể có liên quan đến nhiều giao dịch thanh toán. Liên kết thông qua trường `contract_id` trong bảng `transactions` tham chiếu đến `id` của bảng `contracts`.
-4. **Tham chiếu liên dịch vụ từ `contracts` (Không nối trực tiếp trong sơ đồ nội bộ)**:
+2. **`users (1) - (N) contracts` (Bên thuê)**: Người dùng tham gia hợp đồng dưới vai trò bên thuê (Employer/Client). Liên kết thông qua `contracts.employer_id -> users.id`.
+3. **`users (1) - (N) contracts` (Bên nhận việc)**: Người dùng tham gia hợp đồng dưới vai trò bên làm việc (Employee/Freelancer). Liên kết thông qua `contracts.employee_id -> users.id`.
+4. **`wallets (1) - (N) transactions`**: Một ví (Wallet) có thể có nhiều giao dịch (Transactions). Liên kết thông qua trường `wallet_id` trong bảng `transactions` tham chiếu đến `id` của bảng `wallets`.
+5. **`contracts (1) - (N) transactions`**: Một hợp đồng (Contract) có thể có liên quan đến nhiều giao dịch thanh toán. Liên kết thông qua trường `contract_id` trong bảng `transactions` tham chiếu đến `id` của bảng `contracts`.
+6. **Tham chiếu liên dịch vụ từ `contracts` (Không nối trực tiếp trong sơ đồ nội bộ)**:
    - `contracts.job_id`: Khóa ngoại tham chiếu tới bảng `job` trong service **Core**.
-   - `contracts.freelancer_id`: Khóa ngoại tham chiếu tới bảng `users` trong service **Identity** (dưới vai trò freelancer, NULLABLE).
----
+   - `contracts.source_id`: Khóa ngoại tham chiếu tới bản ghi chào thầu (`bids`) hoặc lời mời (`offers`) trong service **Core**.
 
 ### 5.4. Bounded Context: Notification (`occupify-notification` — Port 8184)
 
@@ -635,7 +639,7 @@ Chịu trách nhiệm kiểm duyệt nội dung, xử lý báo cáo vi phạm, g
    - `email`: `VARCHAR(255) [UQ]` — Địa chỉ email.
    - `full_name`: `VARCHAR(150)` — Họ và tên người dùng.
    - `avatar_url`: `VARCHAR(500) [NULL]` — Đường dẫn ảnh đại diện.
-   - `role`: `ENUM('FREELANCER', 'CLIENT', 'ADMIN')` — Vai trò chính của người dùng.
+   - `role`: `ENUM('EMPLOYEE', 'EMPLOYER', 'ADMIN')` — Vai trò chính của người dùng.
    - `status`: `ENUM('ACTIVE', 'INACTIVE', 'DELETED')` — Trạng thái hoạt động của tài khoản.
    - `created_at`: `TIMESTAMP` — Thời điểm tạo tài khoản.
    - `deleted_at`: `TIMESTAMP [NULL]` — Thời điểm xóa mềm tài khoản.
@@ -655,7 +659,7 @@ Chịu trách nhiệm kiểm duyệt nội dung, xử lý báo cáo vi phạm, g
    - `target_type`: `ENUM('USER', 'PROJECT')` — Đối tượng bị báo cáo (Người dùng hoặc Dự án).
    - `target_user_id`: `UUID [FK -> users.id, NULL]` — Người dùng bị báo cáo (nếu `target_type = USER`).
    - `target_project_id`: `UUID [FK -> projects.id, NULL]` — Dự án bị báo cáo (nếu `target_type = PROJECT`).
-   - `reason_category`: `ENUM('FRAUD', 'OUTSIDE PAYMENT', 'FAKE INFORMATION', 'SPAM', 'HARASSMENT', 'OTHER')` — Danh mục lý do báo cáo vi phạm.
+   - `reason_category`: `ENUM('FRAUD', 'OUTSIDE_PAYMENT', 'FAKE_INFORMATION', 'SPAM', 'HARASSMENT', 'OTHER')` — Danh mục lý do báo cáo vi phạm.
    - `description`: `TEXT` — Chi tiết nội dung phản ánh vi phạm.
    - `status`: `ENUM('PENDING', 'RESOLVED', 'DISMISSED')` — Trạng thái xử lý báo cáo.
    - `created_at`: `TIMESTAMP` — Thời điểm gửi báo cáo.
