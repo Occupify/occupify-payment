@@ -50,7 +50,7 @@ erDiagram
 
     USERS {
         UUID id PK
-        VARCHAR email UQ
+        VARCHAR email UK
         VARCHAR password_hash
         VARCHAR full_name
         VARCHAR headline
@@ -109,7 +109,7 @@ erDiagram
 
     SKILLS {
         UUID id PK
-        VARCHAR name UQ
+        VARCHAR name UK
         VARCHAR category
         TIMESTAMP created_at "Audit"
         TIMESTAMP updated_at "Audit"

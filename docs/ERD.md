@@ -28,7 +28,7 @@ erDiagram
 
     USERS {
         UUID id PK
-        VARCHAR email "UQ (Unique)"
+        VARCHAR email UK "Unique"
         VARCHAR full_name
         VARCHAR avatar_url
     }

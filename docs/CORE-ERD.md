@@ -62,7 +62,7 @@ erDiagram
 
     USERS {
         UUID id PK
-        VARCHAR email UQ
+        VARCHAR email UK
         VARCHAR full_name
         VARCHAR avatar_url
         ENUM role "freelancer, client, admin"
@@ -73,7 +73,7 @@ erDiagram
 
     SKILLS {
         UUID id PK
-        VARCHAR name UQ
+        VARCHAR name UK
     }
 
     JOB_SKILLS {

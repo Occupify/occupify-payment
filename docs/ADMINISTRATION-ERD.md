@@ -39,7 +39,7 @@ erDiagram
 
     USERS {
         UUID id PK
-        VARCHAR email UQ
+        VARCHAR email UK
         VARCHAR full_name
         VARCHAR avatar_url "Nullable"
         ENUM role "FREELANCER, CLIENT, ADMIN"
