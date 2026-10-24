@@ -22,15 +22,12 @@ CREATE TABLE IF NOT EXISTS contracts (
     employee_id UUID,
     source_type VARCHAR(50),
     source_id UUID,
-    agreed_rate DECIMAL(19, 4) NOT NULL,
     salary_type VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-    payment_status VARCHAR(50),
     started_at TIMESTAMP,
     finished_at TIMESTAMP,
     CONSTRAINT fk_contracts_employer FOREIGN KEY (employer_id) REFERENCES users(id),
-    CONSTRAINT fk_contracts_employee FOREIGN KEY (employee_id) REFERENCES users(id),
-    CONSTRAINT chk_contracts_agreed_rate_positive CHECK (agreed_rate > 0)
+    CONSTRAINT fk_contracts_employee FOREIGN KEY (employee_id) REFERENCES users(id)
 );
 
 -- 3. Table: wallets (Digital wallet for user accounts)

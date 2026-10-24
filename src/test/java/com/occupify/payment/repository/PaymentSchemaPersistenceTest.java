@@ -147,10 +147,8 @@ class PaymentSchemaPersistenceTest {
                 .employee(employee)
                 .sourceType("JOB_BID")
                 .sourceId(sourceId)
-                .agreedRate(new BigDecimal("2500.0000"))
                 .salaryType(SalaryType.FIXED)
                 .status(ContractStatus.IN_PROGRESS)
-                .paymentStatus("ESCROW_HELD")
                 .startedAt(startedAt)
                 .finishedAt(finishedAt)
                 .build();
@@ -165,10 +163,8 @@ class PaymentSchemaPersistenceTest {
         assertThat(saved.getEmployeeId()).isEqualTo(employee.getId());
         assertThat(saved.getSourceType()).isEqualTo("JOB_BID");
         assertThat(saved.getSourceId()).isEqualTo(sourceId);
-        assertThat(saved.getAgreedRate()).isEqualByComparingTo("2500.0000");
         assertThat(saved.getSalaryType()).isEqualTo(SalaryType.FIXED);
         assertThat(saved.getStatus()).isEqualTo(ContractStatus.IN_PROGRESS);
-        assertThat(saved.getPaymentStatus()).isEqualTo("ESCROW_HELD");
         assertThat(saved.getStartedAt()).isNotNull();
         assertThat(saved.getFinishedAt()).isNotNull();
 
@@ -192,7 +188,6 @@ class PaymentSchemaPersistenceTest {
                 .jobId(UUID.randomUUID())
                 .employer(employer)
                 .employee(null)
-                .agreedRate(new BigDecimal("1500.0000"))
                 .salaryType(SalaryType.DAY)
                 .status(ContractStatus.PENDING)
                 .build();
@@ -221,7 +216,6 @@ class PaymentSchemaPersistenceTest {
         Contract contract = contractRepository.saveAndFlush(Contract.builder()
                 .jobId(UUID.randomUUID())
                 .employer(user)
-                .agreedRate(new BigDecimal("3000.0000"))
                 .salaryType(SalaryType.FIXED)
                 .status(ContractStatus.PENDING)
                 .build());
@@ -267,7 +261,6 @@ class PaymentSchemaPersistenceTest {
         Contract contract = contractRepository.saveAndFlush(Contract.builder()
                 .jobId(UUID.randomUUID())
                 .employer(user)
-                .agreedRate(new BigDecimal("5000.0000"))
                 .salaryType(SalaryType.FIXED)
                 .build());
 
@@ -331,7 +324,6 @@ class PaymentSchemaPersistenceTest {
         Contract contract = contractRepository.saveAndFlush(Contract.builder()
                 .jobId(UUID.randomUUID())
                 .employer(user)
-                .agreedRate(new BigDecimal("100.0000"))
                 .salaryType(SalaryType.FIXED)
                 .build());
 
@@ -344,26 +336,6 @@ class PaymentSchemaPersistenceTest {
                 .build();
 
         assertThatThrownBy(() -> transactionRepository.saveAndFlush(zeroAmountTx))
-                .isInstanceOf(Exception.class);
-    }
-
-    @Test
-    @DisplayName("Should fail when persisting Contract with non-positive agreed_rate (Check Constraint Invariant)")
-    void shouldFailWhenContractAgreedRateIsNotPositive() {
-        User user = userRepository.saveAndFlush(User.builder()
-                .id(UUID.randomUUID())
-                .email("contract.check@occupify.com")
-                .fullName("Check User")
-                .build());
-
-        Contract invalidContract = Contract.builder()
-                .jobId(UUID.randomUUID())
-                .employer(user)
-                .agreedRate(new BigDecimal("-50.0000"))
-                .salaryType(SalaryType.FIXED)
-                .build();
-
-        assertThatThrownBy(() -> contractRepository.saveAndFlush(invalidContract))
                 .isInstanceOf(Exception.class);
     }
 }

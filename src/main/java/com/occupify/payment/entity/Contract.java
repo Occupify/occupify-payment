@@ -5,7 +5,6 @@ import com.occupify.payment.enums.SalaryType;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -40,9 +39,6 @@ public class Contract {
     @Column(name = "source_id")
     private UUID sourceId;
 
-    @Column(name = "agreed_rate", nullable = false, precision = 19, scale = 4)
-    private BigDecimal agreedRate;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "salary_type", nullable = false, length = 50)
     private SalaryType salaryType;
@@ -51,9 +47,6 @@ public class Contract {
     @Column(nullable = false, length = 50)
     @Builder.Default
     private ContractStatus status = ContractStatus.PENDING;
-
-    @Column(name = "payment_status", length = 50)
-    private String paymentStatus;
 
     @Column(name = "started_at")
     private LocalDateTime startedAt;
