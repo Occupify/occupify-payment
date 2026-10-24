@@ -62,10 +62,8 @@ erDiagram
         UUID employee_id FK "-> users.id (Nullable)"
         VARCHAR source_type "JOB_BID, DIRECT_OFFER"
         UUID source_id "Logical FK -> Core.bids/offers"
-        DECIMAL agreed_rate
         VARCHAR salary_type "DAY, WEEK, ..."
         VARCHAR status "pending, in_progress, completed, cancelled"
-        VARCHAR payment_status
         TIMESTAMP started_at
         TIMESTAMP finished_at
     }
@@ -132,10 +130,8 @@ Bảng lưu trữ thông tin hợp đồng thỏa thuận dịch vụ sao chép 
 | `employee_id` | `UUID` | **FK** -> `users.id`, NULLABLE | NULL | Freelancer nhận việc nhận thù lao giải ngân |
 | `source_type` | `VARCHAR(50)` | NULLABLE | NULL | Nguồn tạo hợp đồng: `JOB_BID`, `DIRECT_OFFER` |
 | `source_id` | `UUID` | NULLABLE | NULL | Định danh bản ghi nguồn (`Core.bids.id` hoặc `Core.offers.id`) |
-| `agreed_rate` | `DECIMAL` | NOT NULL | None | Mức thù lao thỏa thuận chi trả / giá trị hợp đồng |
 | `salary_type` | `VARCHAR(50)` | NOT NULL | None | Chu kỳ thù lao (`DAY`, `WEEK`,...) |
 | `status` | `VARCHAR(50)` | NOT NULL | `'pending'` | Trạng thái hợp đồng: `pending`, `in_progress`, `completed`, `cancelled` |
-| `payment_status` | `VARCHAR(50)` | NULLABLE | NULL | Trạng thái ký quỹ / thanh toán |
 | `started_at` | `TIMESTAMP` | NULLABLE | NULL | Thời điểm chính thức bắt đầu công việc |
 | `finished_at` | `TIMESTAMP` | NULLABLE | NULL | Thời điểm hoàn tất công việc |
 
@@ -166,7 +162,7 @@ Bảng `contracts` chứa các khóa ngoại logic có đích đến nằm trong
 1. **Balance Non-Negativity Invariant**:
    - `available_balance >= 0` VÀ `locked_balance >= 0`. Cơ sở dữ liệu bắt buộc có Check Constraint kiểm tra điều kiện này.
 2. **Escrow Life Cycle (Vòng đời ký quỹ)**:
-   - Khi ký hợp đồng và bắt đầu công việc: Tiền tương ứng `agreed_rate` từ `available_balance` của ví Client chuyển sang `locked_balance` (`ESCROW_HOLD`).
+   - Khi ký hợp đồng và bắt đầu công việc: Tiền từ `available_balance` của ví Client chuyển sang `locked_balance` (`ESCROW_HOLD`).
    - Khi hoàn tất nghiệm thu hợp đồng (`completed`): Tiền từ `locked_balance` của ví Client chuyển sang `available_balance` của ví Freelancer (`ESCROW_RELEASE`).
    - Khi hủy hợp đồng (`cancelled`): Tiền từ `locked_balance` được hoàn trả về `available_balance` của ví Client (`ESCROW_REFUND`).
 3. **Ledger Immutability (Bất biến sổ cái)**:
