@@ -75,7 +75,7 @@ jobs:
   deploy:
     name: Deploy Payment Service
     needs: build-and-push-ghcr
-    runs-on: self-hosted
+    runs-on: [self-hosted, backend]
 
     steps:
       - name: Checkout GitOps Manifests
