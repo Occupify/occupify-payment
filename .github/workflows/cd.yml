@@ -96,7 +96,7 @@ jobs:
       - name: Sync Permanent Configs & Environment
         working-directory: gitops-manifests
         env:
-          PAYMENT_ENV_CONTENT: ${{ secrets.PAYMENT_ENV_FILE }}
+          SECRET_PAYMENT_OCID: ${{ secrets.SECRET_PAYMENT_OCID }}
         run: |
           mkdir -p ~/.config/systemd/user/git-ops/compose
           mkdir -p ~/.config/systemd/user/git-ops/env
@@ -105,12 +105,38 @@ jobs:
           mkdir -p ~/.config/systemd/user/git-ops/nginx/body
 
           echo "Inject payment.env..."
-          printf "%s\n" "$PAYMENT_ENV_CONTENT" > ~/.config/systemd/user/git-ops/env/payment.env
+          oci secrets secret-bundle get \
+            --secret-id "$SECRET_PAYMENT_OCID" \
+            --auth instance_principal \
+            --stage CURRENT \
+            --query 'data."secret-bundle-content".content' \
+            --raw-output | base64 --decode > ~/.config/systemd/user/git-ops/env/payment.env
 
           echo "Sync compose and service units..."
           cp compose/docker.*.compose.yml ~/.config/systemd/user/git-ops/compose/
           cp service/occupify-*.service ~/.config/systemd/user/
           cp nginx/default.conf ~/.config/systemd/user/git-ops/nginx/default.conf
+
+      - name: Prune Old OCI Secret Versions
+        env:
+          SECRET_PAYMENT_OCID: ${{ secrets.SECRET_PAYMENT_OCID }}
+        run: |
+          DELETION_TIME=$(date -u -d "+1 day 5 minutes" +"%Y-%m-%dT%H:%M:%SZ")
+
+          oci vault secret-version list \
+            --secret-id "$SECRET_PAYMENT_OCID" \
+            --auth instance_principal \
+            --raw-output | \
+            jq -r '.data | map(select(."time-of-deletion" == null)) | .[3:][]."version-number"' | \
+            while read -r VER; do
+              [ -z "$VER" ] && continue
+              echo "Scheduling deletion for Version $VER at $DELETION_TIME..."
+              oci vault secret-version schedule-deletion \
+                --secret-id "$SECRET_PAYMENT_OCID" \
+                --secret-version-number "$VER" \
+                --time-of-deletion "$DELETION_TIME" \
+                --auth instance_principal
+            done
 
       - name: Deploy Payment Service
         working-directory: gitops-manifests
