@@ -50,7 +50,7 @@ public class ContractEventListener {
   @RabbitHandler
   public void handleContractAccepted(ContractAcceptedEvent event) {
     log.info(
-        "[Payment Saga] Handling ContractAcceptedEvent for contractId: {}, employerId: {}, budget: {}",
+        "[Payment Contract Listener] Handling ContractAcceptedEvent for contractId: {}, employerId: {}, budget: {}",
         event.contractId(),
         event.employerId(),
         event.budget());
@@ -60,7 +60,7 @@ public class ContractEventListener {
 
     if (budget.compareTo(BigDecimal.ZERO) <= 0) {
       log.warn(
-          "[Payment Saga] Contract [{}] has zero or negative budget [{}]. Skipping escrow hold.",
+          "[Payment Contract Listener] Contract [{}] has zero or negative budget [{}]. Skipping escrow hold.",
           event.contractId(),
           budget);
       contract.setStatus(ContractStatus.IN_PROGRESS);
@@ -86,7 +86,7 @@ public class ContractEventListener {
     if (walletOpt.isEmpty() || walletOpt.get().getAvailableBalance().compareTo(budget) < 0) {
       BigDecimal available = walletOpt.map(Wallet::getAvailableBalance).orElse(BigDecimal.ZERO);
       log.warn(
-          "[Payment Saga] Insufficient funds for contract [{}]. Available: {}, Required: {}. Emitting compensation request.",
+          "[Payment Contract Listener] Insufficient funds for contract [{}]. Available: {}, Required: {}. Emitting compensation request.",
           event.contractId(),
           available,
           budget);
@@ -137,7 +137,7 @@ public class ContractEventListener {
     payoutSchedulerManager.armScheduler(contract);
 
     log.info(
-        "[Payment Saga] Successfully locked escrow [{}] and activated contract [{}]",
+        "[Payment Contract Listener] Successfully locked escrow [{}] and activated contract [{}]",
         budget,
         event.contractId());
 
@@ -150,7 +150,7 @@ public class ContractEventListener {
   @RabbitHandler
   public void handleContractRejected(ContractRejectedEvent event) {
     log.info(
-        "[Payment Saga] Handling ContractRejectedEvent for contractId: {}, reason: {}",
+        "[Payment Contract Listener] Handling ContractRejectedEvent for contractId: {}, reason: {}",
         event.contractId(),
         event.reason());
 
@@ -162,7 +162,7 @@ public class ContractEventListener {
               contract.setFinishedAt(LocalDateTime.now());
               contractRepository.save(contract);
               payoutSchedulerManager.cancelScheduler(contract.getId());
-              log.info("[Payment Saga] Marked contract [{}] as CANCELLED", event.contractId());
+              log.info("[Payment Contract Listener] Marked contract [{}] as CANCELLED", event.contractId());
             });
   }
 
@@ -170,7 +170,7 @@ public class ContractEventListener {
   @RabbitHandler
   public void handleContractCompensation(ContractCompensationRequestedEvent event) {
     log.warn(
-        "[Payment Saga] Handling compensation for contractId: {}, reason: {}",
+        "[Payment Contract Listener] Handling compensation for contractId: {}, reason: {}",
         event.contractId(),
         event.reason());
 
@@ -209,7 +209,7 @@ public class ContractEventListener {
                           .build();
                   transactionRepository.save(refundTx);
                   log.info(
-                      "[Payment Saga] Released locked escrow [{}] back to employer [{}]",
+                      "[Payment Contract Listener] Released locked escrow [{}] back to employer [{}]",
                       amount,
                       wallet.getUser().getId());
                 });
@@ -220,7 +220,7 @@ public class ContractEventListener {
     contract.setStatus(ContractStatus.PENDING);
     contract.setStartedAt(null);
     contractRepository.save(contract);
-    log.info("[Payment Saga] Reverted contract [{}] status back to PENDING", event.contractId());
+    log.info("[Payment Contract Listener] Reverted contract [{}] status back to PENDING", event.contractId());
   }
 
   private Contract getOrCreateContract(ContractAcceptedEvent event) {
