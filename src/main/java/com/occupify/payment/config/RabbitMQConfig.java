@@ -128,6 +128,7 @@ public class RabbitMQConfig {
   public MessageConverter jackson2JsonMessageConverter() {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.registerModule(new JavaTimeModule());
+    objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(objectMapper);
 
     DefaultJackson2JavaTypeMapper typeMapper = new DefaultJackson2JavaTypeMapper();

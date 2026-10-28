@@ -188,7 +188,7 @@ class PaymentSchemaPersistenceTest {
                 .jobId(UUID.randomUUID())
                 .employer(employer)
                 .employee(null)
-                .salaryType(SalaryType.DAY)
+                .salaryType(SalaryType.HOURLY)
                 .status(ContractStatus.PENDING)
                 .build();
 
