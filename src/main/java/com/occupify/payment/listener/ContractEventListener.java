@@ -10,6 +10,7 @@ import com.occupify.payment.enums.SalaryType;
 import com.occupify.payment.enums.TransactionStatus;
 import com.occupify.payment.enums.TransactionType;
 import com.occupify.payment.event.ContractAcceptedEvent;
+import com.occupify.payment.event.ContractCancelledEvent;
 import com.occupify.payment.event.ContractCompensationRequestedEvent;
 import com.occupify.payment.event.ContractCompletedEvent;
 import com.occupify.payment.event.ContractEscrowLockedEvent;
@@ -304,6 +305,77 @@ public class ContractEventListener {
     contract.setFinishedAt(event.finishedAt() != null ? event.finishedAt() : LocalDateTime.now());
     contractRepository.save(contract);
     log.info("[Payment Contract Listener] Marked contract [{}] as COMPLETED", event.contractId());
+  }
+
+  @Transactional
+  @RabbitHandler
+  public void handleContractCancelled(ContractCancelledEvent event) {
+    if (event == null || event.contractId() == null) {
+      log.warn("[Payment Contract Listener] Received invalid ContractCancelledEvent");
+      return;
+    }
+    log.info("[Payment Contract Listener] Handling ContractCancelledEvent for contractId: {}, reason: {}",
+        event.contractId(), event.reason());
+
+    Optional<Contract> contractOpt = contractRepository.findById(event.contractId());
+    if (contractOpt.isEmpty()) {
+      log.warn("[Payment Contract Listener] Contract [{}] not found for cancellation", event.contractId());
+      return;
+    }
+
+    Contract contract = contractOpt.get();
+    payoutSchedulerManager.cancelScheduler(contract.getId());
+
+    if (contract.getEmployer() != null) {
+      BigDecimal totalHeld = transactionRepository.findByContractId(contract.getId()).stream()
+          .filter(t -> t.getTransactionType() == TransactionType.ESCROW_HOLD && t.getStatus() == TransactionStatus.SUCCESS)
+          .map(Transaction::getAmount)
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      BigDecimal totalReleased = transactionRepository.findByContractId(contract.getId()).stream()
+          .filter(t -> t.getTransactionType() == TransactionType.ESCROW_RELEASE && t.getStatus() == TransactionStatus.SUCCESS)
+          .map(Transaction::getAmount)
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      BigDecimal totalRefunded = transactionRepository.findByContractId(contract.getId()).stream()
+          .filter(t -> t.getTransactionType() == TransactionType.ESCROW_REFUND && t.getStatus() == TransactionStatus.SUCCESS)
+          .map(Transaction::getAmount)
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      BigDecimal remainingEscrow = totalHeld.subtract(totalReleased).subtract(totalRefunded);
+
+      if (remainingEscrow.compareTo(BigDecimal.ZERO) > 0) {
+        Optional<Wallet> employerWalletOpt = walletRepository.findByUserIdForUpdate(contract.getEmployer().getId());
+        if (employerWalletOpt.isPresent()) {
+          Wallet employerWallet = employerWalletOpt.get();
+          BigDecimal refundAmount = employerWallet.getLockedBalance().min(remainingEscrow);
+
+          if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            employerWallet.setLockedBalance(employerWallet.getLockedBalance().subtract(refundAmount));
+            employerWallet.setAvailableBalance(employerWallet.getAvailableBalance().add(refundAmount));
+            walletRepository.save(employerWallet);
+
+            Transaction refundTx = Transaction.builder()
+                .wallet(employerWallet)
+                .contract(contract)
+                .amount(refundAmount)
+                .transactionType(TransactionType.ESCROW_REFUND)
+                .paymentMethod(PaymentMethod.INTERNAL_WALLET)
+                .status(TransactionStatus.SUCCESS)
+                .build();
+            transactionRepository.save(refundTx);
+
+            log.info("[Payment Contract Listener] Refunded remaining locked escrow [{}] back to employer [{}] for contract [{}]",
+                refundAmount, employerWallet.getUser().getId(), contract.getId());
+          }
+        }
+      }
+    }
+
+    contract.setStatus(ContractStatus.CANCELLED);
+    contract.setFinishedAt(event.timestamp() != null ? event.timestamp() : LocalDateTime.now());
+    contractRepository.save(contract);
+    log.info("[Payment Contract Listener] Marked contract [{}] as CANCELLED", event.contractId());
   }
 
   private Contract getOrCreateContract(ContractAcceptedEvent event) {
