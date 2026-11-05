@@ -3,11 +3,11 @@ COMPOSE ?= $(shell if command -v docker >/dev/null 2>&1; then echo "docker compo
 
 .PHONY: help up infra down
 
-infra: 
+infra:
 	@$(COMPOSE) $(ENV_FILE) up -d
 
 up: infra
 	@./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
-down: 
-	@$(COMPOSE) $(ENV_FILE) down
+down:
+	@$(COMPOSE) $(ENV_FILE) down -v
