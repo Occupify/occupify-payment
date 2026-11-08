@@ -27,6 +27,14 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000ms
+          max-attempts: 3
+          multiplier: 2.0
 
 app:
   rabbitmq:
@@ -41,6 +49,8 @@ app:
     dlx-exchange: ${RABBITMQ_DLX_EXCHANGE:occupify.payment.dlx}
     dlq-queue: ${RABBITMQ_USER_DLQ:occupify.payment.user.dlq}
     dlq-routing-key: ${RABBITMQ_USER_DLQ_ROUTING_KEY:user.dlq}
+    contract-dlq: ${RABBITMQ_CONTRACT_DLQ:occupify.payment.contract.dlq}
+    contract-dlq-routing-key: ${RABBITMQ_CONTRACT_DLQ_ROUTING_KEY:contract.dlq}
 
 management:
   endpoints:
