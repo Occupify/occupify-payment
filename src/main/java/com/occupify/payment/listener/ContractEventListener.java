@@ -234,13 +234,22 @@ public class ContractEventListener {
     }
     log.info("[Payment Contract Listener] Handling ContractCompletedEvent for contractId: {}", event.contractId());
 
-    Optional<Contract> contractOpt = contractRepository.findById(event.contractId());
+    Optional<Contract> contractOpt = contractRepository.findByIdForUpdate(event.contractId());
     if (contractOpt.isEmpty()) {
-      log.warn("[Payment Contract Listener] Contract [{}] not found for completion", event.contractId());
-      return;
+      log.warn("[Payment Contract Listener] Contract [{}] not found for completion, throwing to retry", event.contractId());
+      throw new IllegalStateException("Contract [" + event.contractId() + "] not found for completion. Retrying.");
     }
 
     Contract contract = contractOpt.get();
+    if (contract.getStatus() == ContractStatus.COMPLETED) {
+      log.info("[Payment Contract Listener] Contract [{}] is already COMPLETED, skipping duplicate processing", contract.getId());
+      return;
+    }
+    if (contract.getStatus() == ContractStatus.CANCELLED) {
+      log.warn("[Payment Contract Listener] Contract [{}] is already CANCELLED, skipping completion", contract.getId());
+      return;
+    }
+
     payoutSchedulerManager.cancelScheduler(contract.getId());
 
     if (contract.getEmployer() != null && contract.getEmployee() != null) {
@@ -265,37 +274,56 @@ public class ContractEventListener {
         Optional<Wallet> employerWalletOpt = walletRepository.findByUserIdForUpdate(contract.getEmployer().getId());
         if (employerWalletOpt.isPresent()) {
           Wallet employerWallet = employerWalletOpt.get();
-          BigDecimal releaseAmount = employerWallet.getLockedBalance().min(remainingEscrow);
+          BigDecimal settlementAmount = employerWallet.getLockedBalance().min(remainingEscrow);
 
-          if (releaseAmount.compareTo(BigDecimal.ZERO) > 0) {
-            Wallet employeeWallet = walletRepository.findByUserIdForUpdate(contract.getEmployee().getId())
-                .orElseGet(() -> walletRepository.save(
-                    Wallet.builder()
-                        .user(contract.getEmployee())
-                        .availableBalance(BigDecimal.ZERO)
-                        .lockedBalance(BigDecimal.ZERO)
-                        .build()));
+          if (settlementAmount.compareTo(BigDecimal.ZERO) > 0) {
+            if (contract.getSalaryType() == SalaryType.HOURLY) {
+              employerWallet.setLockedBalance(employerWallet.getLockedBalance().subtract(settlementAmount));
+              employerWallet.setAvailableBalance(employerWallet.getAvailableBalance().add(settlementAmount));
+              walletRepository.save(employerWallet);
 
-            employerWallet.setLockedBalance(employerWallet.getLockedBalance().subtract(releaseAmount));
-            employeeWallet.setAvailableBalance(employeeWallet.getAvailableBalance().add(releaseAmount));
-            walletRepository.save(employerWallet);
-            walletRepository.save(employeeWallet);
+              Transaction refundTx = Transaction.builder()
+                  .wallet(employerWallet)
+                  .contract(contract)
+                  .amount(settlementAmount)
+                  .transactionType(TransactionType.ESCROW_REFUND)
+                  .paymentMethod(PaymentMethod.INTERNAL_WALLET)
+                  .status(TransactionStatus.SUCCESS)
+                  .build();
+              transactionRepository.save(refundTx);
 
-            BigDecimal currentReleased = contract.getTotalReleased() != null ? contract.getTotalReleased() : BigDecimal.ZERO;
-            contract.setTotalReleased(currentReleased.add(releaseAmount));
+              log.info("[Payment Contract Listener] Refunded remaining unworked HOURLY escrow [{}] back to employer [{}] for contract [{}]",
+                  settlementAmount, employerWallet.getUser().getId(), contract.getId());
+            } else {
+              Wallet employeeWallet = walletRepository.findByUserIdForUpdate(contract.getEmployee().getId())
+                  .orElseGet(() -> walletRepository.save(
+                      Wallet.builder()
+                          .user(contract.getEmployee())
+                          .availableBalance(BigDecimal.ZERO)
+                          .lockedBalance(BigDecimal.ZERO)
+                          .build()));
 
-            Transaction releaseTx = Transaction.builder()
-                .wallet(employeeWallet)
-                .contract(contract)
-                .amount(releaseAmount)
-                .transactionType(TransactionType.ESCROW_RELEASE)
-                .paymentMethod(PaymentMethod.INTERNAL_WALLET)
-                .status(TransactionStatus.SUCCESS)
-                .build();
-            transactionRepository.save(releaseTx);
+              employerWallet.setLockedBalance(employerWallet.getLockedBalance().subtract(settlementAmount));
+              employeeWallet.setAvailableBalance(employeeWallet.getAvailableBalance().add(settlementAmount));
+              walletRepository.save(employerWallet);
+              walletRepository.save(employeeWallet);
 
-            log.info("[Payment Contract Listener] Released remaining locked escrow [{}] from employer [{}] to employee [{}] for contract [{}]",
-                releaseAmount, employerWallet.getUser().getId(), employeeWallet.getUser().getId(), contract.getId());
+              BigDecimal currentReleased = contract.getTotalReleased() != null ? contract.getTotalReleased() : BigDecimal.ZERO;
+              contract.setTotalReleased(currentReleased.add(settlementAmount));
+
+              Transaction releaseTx = Transaction.builder()
+                  .wallet(employeeWallet)
+                  .contract(contract)
+                  .amount(settlementAmount)
+                  .transactionType(TransactionType.ESCROW_RELEASE)
+                  .paymentMethod(PaymentMethod.INTERNAL_WALLET)
+                  .status(TransactionStatus.SUCCESS)
+                  .build();
+              transactionRepository.save(releaseTx);
+
+              log.info("[Payment Contract Listener] Released remaining locked escrow [{}] from employer [{}] to employee [{}] for contract [{}]",
+                  settlementAmount, employerWallet.getUser().getId(), employeeWallet.getUser().getId(), contract.getId());
+            }
           }
         }
       }
@@ -317,13 +345,22 @@ public class ContractEventListener {
     log.info("[Payment Contract Listener] Handling ContractCancelledEvent for contractId: {}, reason: {}",
         event.contractId(), event.reason());
 
-    Optional<Contract> contractOpt = contractRepository.findById(event.contractId());
+    Optional<Contract> contractOpt = contractRepository.findByIdForUpdate(event.contractId());
     if (contractOpt.isEmpty()) {
-      log.warn("[Payment Contract Listener] Contract [{}] not found for cancellation", event.contractId());
-      return;
+      log.warn("[Payment Contract Listener] Contract [{}] not found for cancellation, throwing to retry", event.contractId());
+      throw new IllegalStateException("Contract [" + event.contractId() + "] not found for cancellation. Retrying.");
     }
 
     Contract contract = contractOpt.get();
+    if (contract.getStatus() == ContractStatus.CANCELLED) {
+      log.info("[Payment Contract Listener] Contract [{}] is already CANCELLED, skipping duplicate processing", contract.getId());
+      return;
+    }
+    if (contract.getStatus() == ContractStatus.COMPLETED) {
+      log.warn("[Payment Contract Listener] Contract [{}] is already COMPLETED, skipping cancellation", contract.getId());
+      return;
+    }
+
     payoutSchedulerManager.cancelScheduler(contract.getId());
 
     if (contract.getEmployer() != null) {

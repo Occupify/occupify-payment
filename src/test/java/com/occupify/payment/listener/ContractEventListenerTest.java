@@ -1,6 +1,7 @@
 package com.occupify.payment.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -16,7 +17,9 @@ import com.occupify.payment.enums.SalaryType;
 import com.occupify.payment.enums.TransactionStatus;
 import com.occupify.payment.enums.TransactionType;
 import com.occupify.payment.event.ContractAcceptedEvent;
+import com.occupify.payment.event.ContractCancelledEvent;
 import com.occupify.payment.event.ContractCompensationRequestedEvent;
+import com.occupify.payment.event.ContractCompletedEvent;
 import com.occupify.payment.event.ContractEscrowLockedEvent;
 import com.occupify.payment.event.ContractRejectedEvent;
 import com.occupify.payment.repository.ContractRepository;
@@ -186,5 +189,146 @@ class ContractEventListenerTest {
     verify(transactionRepository).save(any(Transaction.class));
     verify(contractRepository).save(contract);
     verify(payoutSchedulerManager).cancelScheduler(contractId);
+  }
+
+  private ContractCompletedEvent createCompletedEvent(UUID cId) {
+    return new ContractCompletedEvent(
+        UUID.randomUUID(), cId, jobId, UUID.randomUUID(),
+        employerId, freelancerId, employerId, "EMPLOYER",
+        "Test Job", new BigDecimal("500.00"), "FIXED",
+        LocalDateTime.now(), LocalDateTime.now(),
+        "emp@occupify.local", "Employer", "free@occupify.local", "Freelancer");
+  }
+
+  private ContractCancelledEvent createCancelledEvent(UUID cId, String reason) {
+    return new ContractCancelledEvent(
+        UUID.randomUUID(), cId, jobId, UUID.randomUUID(),
+        employerId, freelancerId, employerId, "EMPLOYER",
+        reason, "Test Job", new BigDecimal("500.00"), "FIXED",
+        LocalDateTime.now(),
+        "emp@occupify.local", "Employer", "free@occupify.local", "Freelancer");
+  }
+
+  @Test
+  @DisplayName("Should release remaining escrow to employee on completion for FIXED salary contract")
+  void handleContractCompleted_FixedSalary_ReleasesRemainingEscrowToEmployee() {
+    User employer = User.builder().id(employerId).email("emp@occupify.local").fullName("Employer").build();
+    User freelancer = User.builder().id(freelancerId).email("free@occupify.local").fullName("Freelancer").build();
+    Contract contract = Contract.builder().id(contractId).jobId(jobId).employer(employer).employee(freelancer).salaryType(SalaryType.FIXED).status(ContractStatus.IN_PROGRESS).build();
+
+    Wallet employerWallet = Wallet.builder().id(UUID.randomUUID()).user(employer).availableBalance(new BigDecimal("100.00")).lockedBalance(new BigDecimal("500.00")).build();
+    Wallet freelancerWallet = Wallet.builder().id(UUID.randomUUID()).user(freelancer).availableBalance(new BigDecimal("50.00")).lockedBalance(BigDecimal.ZERO).build();
+
+    Transaction holdTx = Transaction.builder().id(UUID.randomUUID()).contract(contract).amount(new BigDecimal("500.00")).transactionType(TransactionType.ESCROW_HOLD).status(TransactionStatus.SUCCESS).build();
+
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.of(contract));
+    when(transactionRepository.findByContractId(contractId)).thenReturn(List.of(holdTx));
+    when(walletRepository.findByUserIdForUpdate(employerId)).thenReturn(Optional.of(employerWallet));
+    when(walletRepository.findByUserIdForUpdate(freelancerId)).thenReturn(Optional.of(freelancerWallet));
+
+    contractEventListener.handleContractCompleted(createCompletedEvent(contractId));
+
+    assertThat(employerWallet.getLockedBalance()).isEqualByComparingTo("0.00");
+    assertThat(freelancerWallet.getAvailableBalance()).isEqualByComparingTo("550.00");
+    assertThat(contract.getStatus()).isEqualTo(ContractStatus.COMPLETED);
+
+    ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository).save(txCaptor.capture());
+    assertThat(txCaptor.getValue().getTransactionType()).isEqualTo(TransactionType.ESCROW_RELEASE);
+    assertThat(txCaptor.getValue().getAmount()).isEqualByComparingTo("500.00");
+  }
+
+  @Test
+  @DisplayName("Should refund remaining unworked escrow to employer on completion for HOURLY contract")
+  void handleContractCompleted_HourlySalary_RefundsRemainingEscrowToEmployer() {
+    User employer = User.builder().id(employerId).email("emp@occupify.local").fullName("Employer").build();
+    User freelancer = User.builder().id(freelancerId).email("free@occupify.local").fullName("Freelancer").build();
+    Contract contract = Contract.builder().id(contractId).jobId(jobId).employer(employer).employee(freelancer).salaryType(SalaryType.HOURLY).status(ContractStatus.IN_PROGRESS).build();
+
+    Wallet employerWallet = Wallet.builder().id(UUID.randomUUID()).user(employer).availableBalance(new BigDecimal("200.00")).lockedBalance(new BigDecimal("300.00")).build();
+
+    Transaction holdTx = Transaction.builder().id(UUID.randomUUID()).contract(contract).amount(new BigDecimal("1000.00")).transactionType(TransactionType.ESCROW_HOLD).status(TransactionStatus.SUCCESS).build();
+    Transaction releasedTx = Transaction.builder().id(UUID.randomUUID()).contract(contract).amount(new BigDecimal("700.00")).transactionType(TransactionType.ESCROW_RELEASE).status(TransactionStatus.SUCCESS).build();
+
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.of(contract));
+    when(transactionRepository.findByContractId(contractId)).thenReturn(List.of(holdTx, releasedTx));
+    when(walletRepository.findByUserIdForUpdate(employerId)).thenReturn(Optional.of(employerWallet));
+
+    contractEventListener.handleContractCompleted(createCompletedEvent(contractId));
+
+    assertThat(employerWallet.getLockedBalance()).isEqualByComparingTo("0.00");
+    assertThat(employerWallet.getAvailableBalance()).isEqualByComparingTo("500.00");
+    assertThat(contract.getStatus()).isEqualTo(ContractStatus.COMPLETED);
+
+    ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository).save(txCaptor.capture());
+    assertThat(txCaptor.getValue().getTransactionType()).isEqualTo(TransactionType.ESCROW_REFUND);
+    assertThat(txCaptor.getValue().getAmount()).isEqualByComparingTo("300.00");
+  }
+
+  @Test
+  @DisplayName("Should be idempotent when contract is already COMPLETED")
+  void handleContractCompleted_AlreadyCompleted_Idempotent() {
+    Contract contract = Contract.builder().id(contractId).status(ContractStatus.COMPLETED).build();
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.of(contract));
+
+    contractEventListener.handleContractCompleted(createCompletedEvent(contractId));
+
+    verify(transactionRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Should throw IllegalStateException when contract is not found on completion")
+  void handleContractCompleted_NotFound_Throws() {
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> contractEventListener.handleContractCompleted(createCompletedEvent(contractId)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("not found for completion");
+  }
+
+  @Test
+  @DisplayName("Should refund remaining escrow to employer on contract cancellation")
+  void handleContractCancelled_RefundsEscrowToEmployer() {
+    User employer = User.builder().id(employerId).email("emp@occupify.local").fullName("Employer").build();
+    Contract contract = Contract.builder().id(contractId).jobId(jobId).employer(employer).status(ContractStatus.IN_PROGRESS).build();
+    Wallet wallet = Wallet.builder().id(UUID.randomUUID()).user(employer).availableBalance(new BigDecimal("100.00")).lockedBalance(new BigDecimal("400.00")).build();
+
+    Transaction holdTx = Transaction.builder().id(UUID.randomUUID()).contract(contract).amount(new BigDecimal("400.00")).transactionType(TransactionType.ESCROW_HOLD).status(TransactionStatus.SUCCESS).build();
+
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.of(contract));
+    when(transactionRepository.findByContractId(contractId)).thenReturn(List.of(holdTx));
+    when(walletRepository.findByUserIdForUpdate(employerId)).thenReturn(Optional.of(wallet));
+
+    contractEventListener.handleContractCancelled(createCancelledEvent(contractId, "Dispute agreed"));
+
+    assertThat(wallet.getLockedBalance()).isEqualByComparingTo("0.00");
+    assertThat(wallet.getAvailableBalance()).isEqualByComparingTo("500.00");
+    assertThat(contract.getStatus()).isEqualTo(ContractStatus.CANCELLED);
+
+    ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+    verify(transactionRepository).save(txCaptor.capture());
+    assertThat(txCaptor.getValue().getTransactionType()).isEqualTo(TransactionType.ESCROW_REFUND);
+  }
+
+  @Test
+  @DisplayName("Should be idempotent when contract is already CANCELLED")
+  void handleContractCancelled_AlreadyCancelled_Idempotent() {
+    Contract contract = Contract.builder().id(contractId).status(ContractStatus.CANCELLED).build();
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.of(contract));
+
+    contractEventListener.handleContractCancelled(createCancelledEvent(contractId, "Already cancelled"));
+
+    verify(transactionRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Should throw IllegalStateException when contract is not found on cancellation")
+  void handleContractCancelled_NotFound_Throws() {
+    when(contractRepository.findByIdForUpdate(contractId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> contractEventListener.handleContractCancelled(createCancelledEvent(contractId, "Cancelled")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("not found for cancellation");
   }
 }

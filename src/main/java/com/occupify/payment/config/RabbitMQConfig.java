@@ -69,6 +69,12 @@ public class RabbitMQConfig {
   @Value("${app.rabbitmq.contract-cancelled-routing-key:contract.cancelled}")
   private String contractCancelledRoutingKey;
 
+  @Value("${app.rabbitmq.contract-dlq:occupify.payment.contract.dlq}")
+  private String contractDlqQueueName;
+
+  @Value("${app.rabbitmq.contract-dlq-routing-key:contract.dlq}")
+  private String contractDlqRoutingKey;
+
   @Bean
   public TopicExchange contractExchange() {
     return new TopicExchange(contractExchangeName, true, false);
@@ -78,8 +84,18 @@ public class RabbitMQConfig {
   public Queue paymentContractQueue() {
     Map<String, Object> args = new HashMap<>();
     args.put("x-dead-letter-exchange", dlxExchangeName);
-    args.put("x-dead-letter-routing-key", dlqRoutingKey);
+    args.put("x-dead-letter-routing-key", contractDlqRoutingKey);
     return QueueBuilder.durable(contractQueueName).withArguments(args).build();
+  }
+
+  @Bean
+  public Queue paymentContractDlq() {
+    return QueueBuilder.durable(contractDlqQueueName).build();
+  }
+
+  @Bean
+  public Binding paymentContractDlqBinding(Queue paymentContractDlq, DirectExchange paymentDlxExchange) {
+    return BindingBuilder.bind(paymentContractDlq).to(paymentDlxExchange).with(contractDlqRoutingKey);
   }
 
   @Bean
