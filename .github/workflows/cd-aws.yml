@@ -95,13 +95,12 @@ jobs:
           echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
 
-      - name: Sync Permanent Configs & Environment
+      - name: Inject Environment Secrets
         working-directory: gitops-manifests
         env:
           AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
           AWS_SECRET_PAYMENT_ID: ${{ secrets.AWS_SECRET_PAYMENT || 'occupify/prod/payment' }}
         run: |
-          mkdir -p ~/.config/systemd/user/git-ops/compose/payment
           mkdir -p ~/.config/systemd/user/git-ops/env
 
           echo "Inject payment.env from AWS Secrets Manager..."
@@ -110,10 +109,6 @@ jobs:
             --region "$AWS_REGION" \
             --query SecretString \
             --output text > ~/.config/systemd/user/git-ops/env/payment.env
-
-          echo "Sync payment manifests and systemd units..."
-          cp -rf compose/payment ~/.config/systemd/user/git-ops/compose/
-          cp service/occupify-*-payment.service ~/.config/systemd/user/
 
       - name: Deploy Payment Service
         working-directory: gitops-manifests
