@@ -98,11 +98,8 @@ jobs:
         env:
           SECRET_PAYMENT_OCID: ${{ secrets.SECRET_PAYMENT_OCID }}
         run: |
-          mkdir -p ~/.config/systemd/user/git-ops/compose
+          mkdir -p ~/.config/systemd/user/git-ops/services/payment
           mkdir -p ~/.config/systemd/user/git-ops/env
-          mkdir -p ~/.config/systemd/user/git-ops/nginx/logs
-          mkdir -p ~/.config/systemd/user/git-ops/nginx/run
-          mkdir -p ~/.config/systemd/user/git-ops/nginx/body
 
           echo "Inject payment.env..."
           oci secrets secret-bundle get \
@@ -112,10 +109,9 @@ jobs:
             --query 'data."secret-bundle-content".content' \
             --raw-output | base64 --decode > ~/.config/systemd/user/git-ops/env/payment.env
 
-          echo "Sync compose and service units..."
-          cp compose/docker.*.compose.yml ~/.config/systemd/user/git-ops/compose/
-          cp service/occupify-*.service ~/.config/systemd/user/
-          cp nginx/default.conf ~/.config/systemd/user/git-ops/nginx/default.conf
+          echo "Sync payment manifests and systemd units..."
+          cp -rf services/payment ~/.config/systemd/user/git-ops/services/
+          cp service/occupify-*-payment.service ~/.config/systemd/user/
 
       - name: Prune Old OCI Secret Versions
         env:
