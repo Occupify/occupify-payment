@@ -101,11 +101,8 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
           AWS_SECRET_PAYMENT_ID: ${{ secrets.AWS_SECRET_PAYMENT || 'occupify/prod/payment' }}
         run: |
-          mkdir -p ~/.config/systemd/user/git-ops/services
+          mkdir -p ~/.config/systemd/user/git-ops/services/payment
           mkdir -p ~/.config/systemd/user/git-ops/env
-          mkdir -p ~/.config/systemd/user/git-ops/nginx/logs
-          mkdir -p ~/.config/systemd/user/git-ops/nginx/run
-          mkdir -p ~/.config/systemd/user/git-ops/nginx/body
 
           echo "Inject payment.env from AWS Secrets Manager..."
           aws secretsmanager get-secret-value \
@@ -114,10 +111,9 @@ jobs:
             --query SecretString \
             --output text > ~/.config/systemd/user/git-ops/env/payment.env
 
-          echo "Sync services manifests, systemd units, and nginx config..."
-          cp -rf services ~/.config/systemd/user/git-ops/
-          cp service/occupify-*.service ~/.config/systemd/user/
-          cp nginx/default.conf ~/.config/systemd/user/git-ops/nginx/default.conf
+          echo "Sync payment manifests and systemd units..."
+          cp -rf services/payment ~/.config/systemd/user/git-ops/services/
+          cp service/occupify-*-payment.service ~/.config/systemd/user/
 
       - name: Deploy Payment Service
         working-directory: gitops-manifests
