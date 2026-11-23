@@ -3,7 +3,10 @@ name: Occupify Payment CD flow (AWS)
 on:
   push:
     branches:
-      - main-aws
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -68,7 +71,7 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:latest-aws
@@ -77,6 +80,7 @@ jobs:
   deploy:
     name: Deploy Payment Service (AWS)
     needs: build-and-push-ghcr
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
